@@ -27,8 +27,7 @@ const BookSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now },
 });
 
-
 const RegisterModel = mongoose.model("User", UserSchema);
 const BookModel = mongoose.model("Book", BookSchema);
 
-module.exports = { RegisterModel, BookModel };
+module.exports = RegisterModel;

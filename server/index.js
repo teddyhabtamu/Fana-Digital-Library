@@ -17,7 +17,9 @@ app.use(
 );
 
 mongoose
-  .connect("mongodb://localhost:27017/Fana_Digital_Liberary")
+  .connect(
+    "mongodb+srv://tewodroshabtamu29:1234tttt@cluster0.oxizy.mongodb.net/Fana_Digital_Liberary?"
+  )
   .then(() => console.log("Connected to MongoDB"))
   .catch((err) => console.error("MongoDB connection error:", err));
 
@@ -44,7 +46,6 @@ app.post("/check-email", async (req, res) => {
     res.status(500).json({ error: "Internal server error" });
   }
 });
-
 
 app.post("/login", async (req, res) => {
   const { email, password } = req.body;
@@ -78,8 +79,6 @@ app.post("/login", async (req, res) => {
   }
 });
 
-
-
 app.post("/register", validateEmail, async (req, res) => {
   try {
     const { email, password, ...otherData } = req.body;
@@ -90,7 +89,6 @@ app.post("/register", validateEmail, async (req, res) => {
         .status(400)
         .json({ error: "User with this email already exists" });
     }
-
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
@@ -106,7 +104,6 @@ app.post("/register", validateEmail, async (req, res) => {
     res.status(500).json({ error: "Internal server error" });
   }
 });
-
 
 app.post("/send-verification", async (req, res) => {
   const { email } = req.body;
