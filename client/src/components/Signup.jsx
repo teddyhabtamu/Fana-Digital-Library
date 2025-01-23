@@ -3,17 +3,21 @@ import axios from "axios";
 import { useNavigate } from "react-router-dom";
 
 export const Signup = () => {
-  const [name, setname] = useState("");
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [error, setError] = useState("");
   const [password, setPassword] = useState("");
-  const [message, setMessage] = useState(""); // Success or info message
+  const [message, setMessage] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setIsLoading(true);
+
     if (!email.endsWith("@aau.edu.et")) {
       setError("Email must end with '@aau.edu.et'");
+      setIsLoading(false);
       return;
     }
 
@@ -21,7 +25,6 @@ export const Signup = () => {
     setMessage("");
 
     try {
-      // Step 1: Check if email is already registered
       const emailCheckResponse = await axios.post(
         "http://127.0.0.1:3001/check-email",
         { email }
@@ -29,134 +32,147 @@ export const Signup = () => {
 
       if (emailCheckResponse.data.exists) {
         setError("Email is already registered. Please use a different email.");
+        setIsLoading(false);
         return;
       }
 
-      // Step 2: Proceed with registration
       const response = await axios.post("http://127.0.0.1:3001/register", {
         name,
         email,
         password,
       });
-      console.log(response.data);
 
       if (response.data.success) {
-        // Send email verification
         const verificationResponse = await axios.post(
           "http://127.0.0.1:3001/send-verification",
           { email }
         );
-        if (verificationResponse.data.success) {
-          setMessage(
-            "Registration successful! A verification email has been sent. Please check your inbox."
-          );
-        } else {
-          setMessage(
-            "Registration successful! However, there was an issue sending the verification email."
-          );
-        }
-        navigate("/login");
+
+        setMessage(
+          verificationResponse.data.success
+            ? "Registration successful! Please check your email for verification."
+            : "Registration successful! Verification email will be sent shortly."
+        );
+
+        setTimeout(() => navigate("/login"), 2000);
       } else {
         setError("Registration failed. Please try again.");
       }
     } catch (err) {
       console.error(err);
       setError("An error occurred during registration. Please try again.");
+    } finally {
+      setIsLoading(false);
     }
   };
 
   return (
-    <div
-      id="signup"
-      className="flex items-center justify-center min-h-screen bg-gray-100"
-    >
-      {/* Form Container */}
-      <div className="bg-white shadow-lg rounded-lg p-8 w-full max-w-md font-poppins">
-        <h1 className="text-3xl font-bold text-center text-gray-700 mb-6">
-          Register
-        </h1>
+    <div className="min-h-screen bg-gradient-to-br from-blue-900 via-indigo-900 to-purple-900 flex items-center justify-center px-4 py-12">
+      <div className="relative w-full max-w-md">
+        {/* Background Decorative Elements */}
+        <div className="absolute inset-0 bg-white/5 backdrop-blur-lg rounded-2xl transform -rotate-3"></div>
+        <div className="absolute inset-0 bg-white/5 backdrop-blur-lg rounded-2xl transform rotate-3"></div>
 
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Name */}
-          <div>
-            <label
-              htmlFor="name"
-              className="block text-sm font-medium text-gray-700 mb-1"
-            >
-              Name
-            </label>
-            <input
-              className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              type="text"
-              name="name"
-              placeholder="Enter your name"
-              required
-              onChange={(e) => setname(e.target.value)}
-            />
+        {/* Main Form Container */}
+        <div className="relative bg-white/10 backdrop-blur-xl rounded-xl p-8 shadow-2xl border border-white/20">
+          <div className="mb-8 text-center">
+            <h1 className="text-4xl font-bold text-white mb-2">
+              Create Account
+            </h1>
+            <p className="text-blue-200">Join our community of learners</p>
           </div>
 
-          {/* Email */}
-          <div>
-            <label
-              htmlFor="email"
-              className="block text-sm font-medium text-gray-700 mb-1"
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Name Input */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-blue-100">
+                Full Name
+              </label>
+              <input
+                type="text"
+                required
+                onChange={(e) => setName(e.target.value)}
+                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 text-white placeholder-blue-200"
+                placeholder="Enter your full name"
+              />
+            </div>
+
+            {/* Email Input */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-blue-100">
+                Email Address
+              </label>
+              <input
+                type="email"
+                required
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 text-white placeholder-blue-200"
+                placeholder="your.email@aau.edu.et"
+              />
+            </div>
+
+            {/* Password Input */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-blue-100">
+                Password
+              </label>
+              <input
+                type="password"
+                required
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 text-white placeholder-blue-200"
+                placeholder="Create a strong password"
+              />
+            </div>
+
+            {/* Error Message */}
+            {error && (
+              <div className="text-red-300 text-sm bg-red-500/10 px-4 py-2 rounded-lg">
+                {error}
+              </div>
+            )}
+
+            {/* Success Message */}
+            {message && (
+              <div className="text-green-300 text-sm bg-green-500/10 px-4 py-2 rounded-lg">
+                {message}
+              </div>
+            )}
+
+            {/* Submit Button */}
+            <button
+              type="submit"
+              disabled={isLoading}
+              className={`w-full py-3 px-4 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-lg font-medium 
+                ${
+                  isLoading
+                    ? "opacity-75 cursor-not-allowed"
+                    : "hover:from-blue-600 hover:to-purple-600"
+                } 
+                transform transition-all duration-300 hover:scale-[1.02]`}
             >
-              Email
-            </label>
-            <input
-              className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              type="email"
-              name="email"
-              placeholder="Enter your email"
-              required
-              onChange={(e) => setEmail(e.target.value)}
-            />
-            {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
-          </div>
+              {isLoading ? (
+                <div className="flex items-center justify-center">
+                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                  Creating Account...
+                </div>
+              ) : (
+                "Create Account"
+              )}
+            </button>
 
-          {/* Password */}
-          <div>
-            <label
-              htmlFor="password"
-              className="block text-sm font-medium text-gray-700 mb-1"
-            >
-              Password
-            </label>
-            <input
-              className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              type="password"
-              name="password"
-              placeholder="Enter your password"
-              required
-              onChange={(e) => setPassword(e.target.value)}
-            />
-          </div>
-
-          {/* Submit Button */}
-          <button
-            type="submit"
-            className="w-full bg-blue-600 text-white py-2 rounded-md font-medium hover:bg-blue-700 transition duration-300"
-          >
-            Register
-          </button>
-        </form>
-
-        {/* Footer */}
-        <p className="text-sm text-center text-gray-600 mt-4">
-          Already have an account?{" "}
-          <a
-            href="/login"
-            className="text-blue-500 hover:underline font-medium"
-          >
-            Login
-          </a>
-        </p>
-        {message && (
-          <p className="text-green-500 text-center mt-4 font-medium">
-            {message}
-          </p>
-        )}
+            {/* Login Link */}
+            <div className="text-center text-blue-200">
+              Already have an account?{" "}
+              <a
+                href="/login"
+                className="text-blue-400 hover:text-blue-300 font-medium transition-colors"
+              >
+                Sign in
+              </a>
+            </div>
+          </form>
+        </div>
       </div>
     </div>
   );

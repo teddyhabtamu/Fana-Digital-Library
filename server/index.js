@@ -55,12 +55,12 @@ app.post("/login", async (req, res) => {
 
     if (user) {
       // Check if the email is verified
-      if (!user.verified) {
-        return res.json({
-          success: false,
-          error: "Email not verified. Please check your inbox.",
-        });
-      }
+      // if (!user.verified) {
+      //   return res.json({
+      //     success: false,
+      //     error: "Email not verified. Please check your inbox.",
+      //   });
+      // }
 
       // If the email is verified, check the password
       const isMatch = await bcrypt.compare(password, user.password);
@@ -172,6 +172,236 @@ app.get("/verify/:token", async (req, res) => {
     res.status(500).json({ success: false, message: "Internal server error" });
   }
 });
+
+const axios = require("axios");
+
+app.get("/books", async (req, res) => {
+  const queries = [
+    "electrical engineering textbook",
+    "mechanical engineering textbook",
+    "civil engineering textbook",
+    "software engineering textbook",
+    "chemical engineering textbook",
+    "biomedical engineering textbook",
+  ];
+
+  const departmentKeywords = {
+    Electrical: [
+      "electric",
+      "circuit",
+      "electronics",
+      "electrical",
+      "power",
+      "voltage",
+      "current",
+      "semiconductor",
+      "signal",
+      "control systems",
+      "microprocessor",
+      "electromagnetic",
+      "digital",
+      "communication systems",
+      "energy",
+      "motor",
+      "transformer",
+      "power systems",
+      "electromagnetics",
+      "antenna",
+    ],
+    Biomedical: [
+      "biomedical",
+      "health",
+      "medicine",
+      "anatomy",
+      "physiology",
+      "biomechanics",
+      "medical devices",
+      "biotechnology",
+      "clinical",
+      "healthcare",
+      "bioengineering",
+      "medical imaging",
+      "biomaterials",
+      "bioinformatics",
+      "rehabilitation",
+      "medical electronics",
+      "biomedical instrumentation",
+    ],
+    Chemical: [
+      "chemical",
+      "chemistry",
+      "reaction",
+      "materials",
+      "process",
+      "fluid",
+      "thermodynamics",
+      "polymer",
+      "organic",
+      "inorganic",
+      "biochemical",
+      "mass transfer",
+      "unit operations",
+      "reactor design",
+      "separation process",
+      "heat transfer",
+      "chemical process",
+      "petrochemical",
+    ],
+    Mechanical: [
+      "mechanical",
+      "machines",
+      "design",
+      "thermodynamics",
+      "robotics",
+      "automotive",
+      "manufacturing",
+      "dynamics",
+      "fluid mechanics",
+      "heat transfer",
+      "mechanics",
+      "machine design",
+      "CAD",
+      "HVAC",
+      "kinematics",
+      "vibration",
+      "mechatronics",
+      "strength of materials",
+      "thermal",
+    ],
+    Civil: [
+      "civil",
+      "construction",
+      "structures",
+      "buildings",
+      "structural",
+      "concrete",
+      "transportation",
+      "geotechnical",
+      "environmental",
+      "hydraulics",
+      "surveying",
+      "foundation",
+      "steel design",
+      "water resources",
+      "bridge",
+      "earthquake",
+      "soil mechanics",
+      "construction management",
+    ],
+    Software: [
+      "software",
+      "programming",
+      "code",
+      "developer",
+      "web",
+      "computer",
+      "database",
+      "algorithm",
+      "network",
+      "security",
+      "system",
+      "application",
+      "data structures",
+      "operating system",
+      "artificial intelligence",
+      "machine learning",
+      "cyber",
+      "cloud computing",
+      "information technology",
+      "IT",
+    ],
+  };
+
+  function determineDepartment(title, description, categories) {
+    const contentToCheck = `${title} ${description} ${categories?.join(
+      " "
+    )}`.toLowerCase();
+    let maxMatches = 0;
+    let bestDepartment = "Not Specified";
+
+    for (const [department, keywords] of Object.entries(departmentKeywords)) {
+      const matches = keywords.filter((keyword) =>
+        contentToCheck.includes(keyword.toLowerCase())
+      ).length;
+
+      if (matches > maxMatches) {
+        maxMatches = matches;
+        bestDepartment = department;
+      }
+    }
+
+    return maxMatches > 0 ? bestDepartment : "Not Specified";
+  }
+
+  try {
+    const allBooks = [];
+
+    for (const query of queries) {
+      const apiUrl = `https://www.googleapis.com/books/v1/volumes?q=${query}&maxResults=10&filter=free-ebooks`;
+      const response = await axios.get(apiUrl);
+
+      if (response.data.items) {
+        const books = response.data.items.map((book) => {
+          const volumeInfo = book.volumeInfo;
+          const accessInfo = book.accessInfo;
+
+          return {
+            id: book.id,
+            title: volumeInfo.title || "Untitled",
+            author: volumeInfo.authors
+              ? volumeInfo.authors.join(", ")
+              : "Unknown",
+            description: volumeInfo.description || "No description available",
+            thumbnail: volumeInfo.imageLinks?.thumbnail || "",
+            previewLink: volumeInfo.previewLink || "",
+            downloadLink: accessInfo?.pdf?.downloadLink || "",
+            webReaderLink: accessInfo?.webReaderLink || "",
+            department: determineDepartment(
+              volumeInfo.title,
+              volumeInfo.description,
+              volumeInfo.categories
+            ),
+            publishedDate: volumeInfo.publishedDate,
+            pageCount: volumeInfo.pageCount,
+            categories: volumeInfo.categories,
+            language: volumeInfo.language,
+            fileAvailable: accessInfo?.pdf?.isAvailable || false,
+            epub: accessInfo?.epub?.isAvailable || false,
+            pdf: accessInfo?.pdf?.isAvailable || false,
+          };
+        });
+        allBooks.push(...books);
+      }
+    }
+
+    // Remove duplicates based on book ID and title
+    const uniqueBooks = Array.from(
+      new Map(allBooks.map((book) => [book.id + book.title, book])).values()
+    );
+
+    // Filter available books and sort by department
+    const filteredBooks = uniqueBooks
+      .filter((book) => book.fileAvailable)
+      .sort((a, b) => {
+        if (a.department === "Not Specified") return 1;
+        if (b.department === "Not Specified") return -1;
+        return a.department.localeCompare(b.department);
+      });
+
+    res.json({
+      success: true,
+      books: filteredBooks,
+    });
+  } catch (err) {
+    console.error("Error fetching books:", err);
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch books",
+      error: err.message,
+    });
+  }
+});
+
 
 app.listen(3001, () => {
   console.log("Server is running");

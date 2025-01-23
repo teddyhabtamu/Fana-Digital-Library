@@ -22,8 +22,8 @@ const BookSchema = new mongoose.Schema({
     ],
     required: true,
   },
-  fileUrl: { type: String, required: true }, // URL or path to the book file
-  uploadedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" }, // Reference to the uploader
+  fileUrl: { type: String, required: true }, // URL to the book file
+  uploadedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
   createdAt: { type: Date, default: Date.now },
 });
 
