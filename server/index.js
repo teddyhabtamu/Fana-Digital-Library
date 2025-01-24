@@ -175,6 +175,7 @@ app.get("/verify/:token", async (req, res) => {
 
 const axios = require("axios");
 
+
 app.get("/books", async (req, res) => {
   const queries = [
     "electrical engineering textbook",
@@ -337,39 +338,33 @@ app.get("/books", async (req, res) => {
     const allBooks = [];
 
     for (const query of queries) {
-      const apiUrl = `https://www.googleapis.com/books/v1/volumes?q=${query}&maxResults=10&filter=free-ebooks`;
+      const apiUrl = `https://openlibrary.org/search.json?q=${encodeURIComponent(
+        query
+      )}&limit=10`;
       const response = await axios.get(apiUrl);
 
-      if (response.data.items) {
-        const books = response.data.items.map((book) => {
-          const volumeInfo = book.volumeInfo;
-          const accessInfo = book.accessInfo;
-
-          return {
-            id: book.id,
-            title: volumeInfo.title || "Untitled",
-            author: volumeInfo.authors
-              ? volumeInfo.authors.join(", ")
-              : "Unknown",
-            description: volumeInfo.description || "No description available",
-            thumbnail: volumeInfo.imageLinks?.thumbnail || "",
-            previewLink: volumeInfo.previewLink || "",
-            downloadLink: accessInfo?.pdf?.downloadLink || "",
-            webReaderLink: accessInfo?.webReaderLink || "",
-            department: determineDepartment(
-              volumeInfo.title,
-              volumeInfo.description,
-              volumeInfo.categories
-            ),
-            publishedDate: volumeInfo.publishedDate,
-            pageCount: volumeInfo.pageCount,
-            categories: volumeInfo.categories,
-            language: volumeInfo.language,
-            fileAvailable: accessInfo?.pdf?.isAvailable || false,
-            epub: accessInfo?.epub?.isAvailable || false,
-            pdf: accessInfo?.pdf?.isAvailable || false,
-          };
-        });
+      if (response.data.docs) {
+        const books = response.data.docs.map((book) => ({
+          id: book.key,
+          title: book.title || "Untitled",
+          author: book.author_name ? book.author_name.join(", ") : "Unknown",
+          description: book.first_publish_year
+            ? `Published in ${book.first_publish_year}`
+            : "No description available",
+          thumbnail: book.cover_i
+            ? `https://covers.openlibrary.org/b/id/${book.cover_i}-M.jpg`
+            : "",
+          previewLink: `https://openlibrary.org${book.key}`,
+          department: determineDepartment(
+            book.title,
+            book.first_publish_year,
+            book.subject
+          ),
+          publishedDate: book.first_publish_year,
+          pageCount: book.number_of_pages_median,
+          categories: book.subject,
+          language: book.language?.[0],
+        }));
         allBooks.push(...books);
       }
     }
@@ -379,18 +374,16 @@ app.get("/books", async (req, res) => {
       new Map(allBooks.map((book) => [book.id + book.title, book])).values()
     );
 
-    // Filter available books and sort by department
-    const filteredBooks = uniqueBooks
-      .filter((book) => book.fileAvailable)
-      .sort((a, b) => {
-        if (a.department === "Not Specified") return 1;
-        if (b.department === "Not Specified") return -1;
-        return a.department.localeCompare(b.department);
-      });
+    // Sort books by department
+    const sortedBooks = uniqueBooks.sort((a, b) => {
+      if (a.department === "Not Specified") return 1;
+      if (b.department === "Not Specified") return -1;
+      return a.department.localeCompare(b.department);
+    });
 
     res.json({
       success: true,
-      books: filteredBooks,
+      books: sortedBooks,
     });
   } catch (err) {
     console.error("Error fetching books:", err);
@@ -401,6 +394,7 @@ app.get("/books", async (req, res) => {
     });
   }
 });
+
 
 
 app.listen(3001, () => {
