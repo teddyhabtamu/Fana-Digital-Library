@@ -15,12 +15,6 @@ export const Signup = () => {
     e.preventDefault();
     setIsLoading(true);
 
-    if (!email.endsWith("@aau.edu.et")) {
-      setError("Email must end with '@aau.edu.et'");
-      setIsLoading(false);
-      return;
-    }
-
     setError("");
     setMessage("");
 
@@ -110,7 +104,7 @@ export const Signup = () => {
                 required
                 onChange={(e) => setEmail(e.target.value)}
                 className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 text-white placeholder-blue-200"
-                placeholder="your.email@aau.edu.et"
+                placeholder="your.email"
               />
             </div>
 

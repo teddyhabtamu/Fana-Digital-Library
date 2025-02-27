@@ -71,7 +71,7 @@ app.post("/login", async (req, res) => {
   }
 });
 
-app.post("/register", validateEmail, async (req, res) => {
+app.post("/register", async (req, res) => {
   try {
     const { email, password, ...otherData } = req.body;
 
