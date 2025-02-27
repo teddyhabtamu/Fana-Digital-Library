@@ -11,6 +11,12 @@ export const Home = () => {
   const [error, setError] = useState("");
   const [selectedBook, setSelectedBook] = useState(null);
 
+  const logout = () => {
+    localStorage.removeItem("token");
+    window.location.href = "/login";
+  };
+
+
   // Fetch books
   useEffect(() => {
     const fetchBooks = async () => {

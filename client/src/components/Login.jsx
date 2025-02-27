@@ -23,6 +23,7 @@ export const Login = () => {
       })
       .then((result) => {
         if (result.data.success) {
+          localStorage.setItem("token", result.data.token); // Save Token
           navigate("/home");
         } else {
           switch (result.data.error) {
