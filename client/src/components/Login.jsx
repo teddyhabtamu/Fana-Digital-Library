@@ -78,7 +78,7 @@ export const Login = () => {
                   required
                   onChange={(e) => setEmail(e.target.value)}
                   className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 text-white placeholder-blue-200"
-                  placeholder="your.email@aau.edu.et"
+                  placeholder="your.email"
                 />
                 {errEmail && (
                   <p className="absolute -bottom-6 left-0 text-red-300 text-sm">
