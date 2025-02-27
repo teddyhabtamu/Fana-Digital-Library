@@ -26,7 +26,7 @@ export const Signup = () => {
 
     try {
       const emailCheckResponse = await axios.post(
-        "http://127.0.0.1:3001/check-email",
+        `${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/check-email`,
         { email }
       );
 
@@ -36,15 +36,18 @@ export const Signup = () => {
         return;
       }
 
-      const response = await axios.post("http://127.0.0.1:3001/register", {
-        name,
-        email,
-        password,
-      });
+      const response = await axios.post(
+        `${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/register`,
+        {
+          name,
+          email,
+          password,
+        }
+      );
 
       if (response.data.success) {
         const verificationResponse = await axios.post(
-          "http://127.0.0.1:3001/send-verification",
+          `${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/send-verification`,
           { email }
         );
 

@@ -1,3 +1,5 @@
+require("dotenv").config(); 
+
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
@@ -17,9 +19,7 @@ app.use(
 );
 
 mongoose
-  .connect(
-    "mongodb+srv://tewodroshabtamu29:1234tttt@cluster0.oxizy.mongodb.net/Fana_Digital_Liberary?"
-  )
+  .connect(process.env.MONGO_URI) 
   .then(() => console.log("Connected to MongoDB"))
   .catch((err) => console.error("MongoDB connection error:", err));
 
@@ -54,15 +54,6 @@ app.post("/login", async (req, res) => {
     const user = await RegisterModel.findOne({ email });
 
     if (user) {
-      // Check if the email is verified
-      // if (!user.verified) {
-      //   return res.json({
-      //     success: false,
-      //     error: "Email not verified. Please check your inbox.",
-      //   });
-      // }
-
-      // If the email is verified, check the password
       const isMatch = await bcrypt.compare(password, user.password);
 
       if (isMatch) {
@@ -128,13 +119,13 @@ app.post("/send-verification", async (req, res) => {
     const transporter = nodemailer.createTransport({
       service: "Gmail",
       auth: {
-        user: "tewodroshabtamu29@gmail.com",
-        pass: "fqgy owab qkbh vwwf",
+        user: process.env.GMAIL_USER, // Use environment variable for Gmail user
+        pass: process.env.GMAIL_PASS, // Use environment variable for Gmail password
       },
     });
 
     const mailOptions = {
-      from: "tewodroshabtamu29@gmail.com",
+      from: process.env.GMAIL_USER,
       to: email,
       subject: "Verify your email",
       text: `Click the link to verify your email: ${verificationLink}`,
@@ -152,10 +143,9 @@ app.get("/verify/:token", async (req, res) => {
   const { token } = req.params;
 
   try {
-    // Find the user by the verification token
     const user = await RegisterModel.findOneAndUpdate(
       { verificationToken: token },
-      { verified: true, verificationToken: null }, // Mark as verified and remove the token
+      { verified: true, verificationToken: null },
       { new: true }
     );
 
@@ -165,7 +155,6 @@ app.get("/verify/:token", async (req, res) => {
         .json({ success: false, message: "Invalid or expired token" });
     }
 
-    // Redirect or send a response to the user
     res.json({ success: true, message: "Email verified successfully!" });
   } catch (err) {
     console.error(err);
@@ -402,7 +391,6 @@ app.get("/books", async (req, res) => {
   }
 });
 
-
-app.listen(3001, () => {
-  console.log("Server is running");
+app.listen(process.env.PORT || 3001, () => {
+  console.log(`Server is running on port ${process.env.PORT || 3001}`);
 });

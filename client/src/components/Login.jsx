@@ -17,7 +17,10 @@ export const Login = () => {
     setErrPassword("");
 
     axios
-      .post("http://127.0.0.1:3001/login", { email, password })
+      .post(`${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/login`, {
+        email,
+        password,
+      })
       .then((result) => {
         if (result.data.success) {
           navigate("/home");
