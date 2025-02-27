@@ -1,4 +1,4 @@
-require("dotenv").config(); 
+require("dotenv").config();
 
 const express = require("express");
 const mongoose = require("mongoose");
@@ -7,19 +7,20 @@ const RegisterModel = require("./models/user");
 const nodemailer = require("nodemailer");
 const crypto = require("crypto");
 const bcrypt = require("bcrypt");
+const axios = require("axios");
 
 const app = express();
 
 app.use(express.json());
 app.use(
   cors({
-    origin: "http://localhost:5173",
+    origin: process.env.FRONTEND_URL, // Use FRONTEND_URL from .env
     credentials: true,
   })
 );
 
 mongoose
-  .connect(process.env.MONGO_URI) 
+  .connect(process.env.MONGO_URI) // Use MONGO_URI from .env
   .then(() => console.log("Connected to MongoDB"))
   .catch((err) => console.error("MongoDB connection error:", err));
 
@@ -114,13 +115,13 @@ app.post("/send-verification", async (req, res) => {
         .json({ success: false, message: "User not found" });
     }
 
-    const verificationLink = `http://localhost:3001/verify/${token}`;
+    const verificationLink = `${process.env.FRONTEND_URL}/verify/${token}`; // Use FRONTEND_URL from .env
 
     const transporter = nodemailer.createTransport({
       service: "Gmail",
       auth: {
-        user: process.env.GMAIL_USER, // Use environment variable for Gmail user
-        pass: process.env.GMAIL_PASS, // Use environment variable for Gmail password
+        user: process.env.GMAIL_USER, // Use GMAIL_USER from .env
+        pass: process.env.GMAIL_PASS, // Use GMAIL_PASS from .env
       },
     });
 
@@ -161,9 +162,6 @@ app.get("/verify/:token", async (req, res) => {
     res.status(500).json({ success: false, message: "Internal server error" });
   }
 });
-
-const axios = require("axios");
-
 
 app.get("/books", async (req, res) => {
   const queries = [
@@ -327,33 +325,39 @@ app.get("/books", async (req, res) => {
     const allBooks = [];
 
     for (const query of queries) {
-      const apiUrl = `https://openlibrary.org/search.json?q=${encodeURIComponent(
-        query
-      )}&limit=10`;
+      const apiUrl = `https://www.googleapis.com/books/v1/volumes?q=${query}&maxResults=10&filter=free-ebooks`;
       const response = await axios.get(apiUrl);
 
-      if (response.data.docs) {
-        const books = response.data.docs.map((book) => ({
-          id: book.key,
-          title: book.title || "Untitled",
-          author: book.author_name ? book.author_name.join(", ") : "Unknown",
-          description: book.first_publish_year
-            ? `Published in ${book.first_publish_year}`
-            : "No description available",
-          thumbnail: book.cover_i
-            ? `https://covers.openlibrary.org/b/id/${book.cover_i}-M.jpg`
-            : "",
-          previewLink: `https://openlibrary.org${book.key}`,
-          department: determineDepartment(
-            book.title,
-            book.first_publish_year,
-            book.subject
-          ),
-          publishedDate: book.first_publish_year,
-          pageCount: book.number_of_pages_median,
-          categories: book.subject,
-          language: book.language?.[0],
-        }));
+      if (response.data.items) {
+        const books = response.data.items.map((book) => {
+          const volumeInfo = book.volumeInfo;
+          const accessInfo = book.accessInfo;
+
+          return {
+            id: book.id,
+            title: volumeInfo.title || "Untitled",
+            author: volumeInfo.authors
+              ? volumeInfo.authors.join(", ")
+              : "Unknown",
+            description: volumeInfo.description || "No description available",
+            thumbnail: volumeInfo.imageLinks?.thumbnail || "",
+            previewLink: volumeInfo.previewLink || "",
+            downloadLink: accessInfo?.pdf?.downloadLink || "",
+            webReaderLink: accessInfo?.webReaderLink || "",
+            department: determineDepartment(
+              volumeInfo.title,
+              volumeInfo.description,
+              volumeInfo.categories
+            ),
+            publishedDate: volumeInfo.publishedDate,
+            pageCount: volumeInfo.pageCount,
+            categories: volumeInfo.categories,
+            language: volumeInfo.language,
+            fileAvailable: accessInfo?.pdf?.isAvailable || false,
+            epub: accessInfo?.epub?.isAvailable || false,
+            pdf: accessInfo?.pdf?.isAvailable || false,
+          };
+        });
         allBooks.push(...books);
       }
     }
@@ -363,16 +367,18 @@ app.get("/books", async (req, res) => {
       new Map(allBooks.map((book) => [book.id + book.title, book])).values()
     );
 
-    // Sort books by department
-    const sortedBooks = uniqueBooks.sort((a, b) => {
-      if (a.department === "Not Specified") return 1;
-      if (b.department === "Not Specified") return -1;
-      return a.department.localeCompare(b.department);
-    });
+    // Filter available books and sort by department
+    const filteredBooks = uniqueBooks
+      .filter((book) => book.fileAvailable)
+      .sort((a, b) => {
+        if (a.department === "Not Specified") return 1;
+        if (b.department === "Not Specified") return -1;
+        return a.department.localeCompare(b.department);
+      });
 
     res.json({
       success: true,
-      books: sortedBooks,
+      books: filteredBooks,
     });
   } catch (err) {
     console.error("Error fetching books:", err);
@@ -383,7 +389,6 @@ app.get("/books", async (req, res) => {
     });
   }
 });
-
 
 app.listen(process.env.PORT || 3001, () => {
   console.log(`Server is running on port ${process.env.PORT || 3001}`);
